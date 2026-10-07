@@ -1,8 +1,8 @@
 import "server-only";
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import { getBlogPost, getBlogPosts, getFaq, getProducts } from "@/lib/content-api";
-import { shapeBlogCard, shapeBlogPost, shapeFaq, shapeProducts } from "@/mcp/shape";
+import { getBlogPost, getBlogPosts, getFaq, getPlans } from "@/lib/content-api";
+import { shapeBlogCard, shapeBlogPost, shapeComparison, shapeFaq, shapeProducts } from "@/mcp/shape";
 import { json, LOCALE_ARG, notFound } from "@/mcp/tools/common";
 
 export function registerContentTools(server: McpServer) {
@@ -59,13 +59,20 @@ export function registerContentTools(server: McpServer) {
         {
             title: "Get subscription plans and pricing",
             description:
-                "Mediawork's subscription plans: what each includes, and its prices. Prices are published in " +
-                "several currencies — pass `currency` to return just one.",
+                "Mediawork's subscription plans: what each includes, and its prices, plus `comparison`, a feature-by-feature " +
+                "table of every plan. Prices are published in several currencies — pass `currency` to return just one.",
             inputSchema: z.object({
                 currency: z.string().optional().describe("ISO currency code, e.g. USD, GBP, EUR"),
                 locale: LOCALE_ARG,
             }),
         },
-        async ({ currency, locale }) => json({ plans: shapeProducts(await getProducts(locale), currency, locale) }),
+        async ({ currency, locale }) => {
+            const { products, comparison } = await getPlans(locale);
+
+            return json({
+                plans: shapeProducts(products, currency, locale),
+                comparison: shapeComparison(comparison, products),
+            });
+        },
     );
 }

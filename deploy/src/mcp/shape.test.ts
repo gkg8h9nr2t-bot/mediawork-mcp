@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { BlogPost, FaqCategory, Product } from "@/lib/content-api";
 import type { FacilityCard, FacilityProfile } from "@/lib/directory-api";
-import { shapeBlogPost, shapeFacilityCard, shapeFacilityProfile, shapeFaq, shapeProducts } from "@/mcp/shape";
+import {
+    shapeBlogPost,
+    shapeComparison,
+    shapeFacilityCard,
+    shapeFacilityProfile,
+    shapeFaq,
+    shapeProducts,
+} from "@/mcp/shape";
 
 const card: FacilityCard = {
     uuid: "facility-uuid",
@@ -215,6 +222,37 @@ describe("shapeProducts", () => {
             {
                 title: "Quoting",
                 features: ["✓ Bid templates", "✗ Custom branding", "Unlimited quote requests", "5 seats"],
+            },
+        ]);
+    });
+});
+
+describe("shapeComparison", () => {
+    it("keys each row by plan name and reads an absent plan as not included", () => {
+        expect(
+            shapeComparison(
+                [
+                    {
+                        title: "Quoting",
+                        features: [
+                            {
+                                label: "Quote templates",
+                                tooltip: null,
+                                values: { "product-uuid": { symbol: "NUMBER", number: 3 } },
+                            },
+                            { label: "Invoicing", tooltip: "Raised from tracked work", values: {} },
+                        ],
+                    },
+                ],
+                products,
+            ),
+        ).toEqual([
+            {
+                title: "Quoting",
+                features: [
+                    { feature: "Quote templates", plans: { Pro: "3" } },
+                    { feature: "Invoicing", note: "Raised from tracked work", plans: { Pro: "✗ Not included" } },
+                ],
             },
         ]);
     });

@@ -57,6 +57,17 @@ export type Product = {
     prices: ProductPrice[] | null;
 };
 
+export type PlanComparisonValue = { symbol: ProductDisplayFeature["symbol"]; number: number | null };
+
+// One row per display feature at least one plan has a value for; `values` is keyed by product uuid and a plan absent from it
+// does not include the feature.
+export type PlanComparisonSection = {
+    title: string;
+    features: { label: string; tooltip: string | null; values: Record<string, PlanComparisonValue> }[];
+};
+
+export type Plans = { products: Product[]; comparison: PlanComparisonSection[] };
+
 // `locale` is a cache-key argument: each locale gets its own cached response, all under one tag.
 export async function getFaq(locale?: string): Promise<FaqCategory[]> {
     "use cache";
@@ -90,12 +101,18 @@ export async function getBlogPost(slug: string): Promise<BlogPost | null> {
     return body?.post ?? null;
 }
 
-export async function getProducts(locale?: string): Promise<Product[]> {
+// `comparison` arrived after `products`; an older app release omits it.
+export async function getPlans(locale?: string): Promise<Plans> {
     "use cache";
     cacheLife("hours");
     cacheTag(PLANS_CACHE_TAG);
 
     const localeParam = locale ? `locale=${encodeURIComponent(locale)}&` : "";
+    const body = await getJson<Partial<Plans>>(`${APP_API_URL}/api/www/products?${localeParam}${bust()}`);
 
-    return (await getJson<{ products: Product[] }>(`${APP_API_URL}/api/www/products?${localeParam}${bust()}`)).products;
+    return { products: body.products ?? [], comparison: body.comparison ?? [] };
+}
+
+export async function getProducts(locale?: string): Promise<Product[]> {
+    return (await getPlans(locale)).products;
 }

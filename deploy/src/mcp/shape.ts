@@ -1,4 +1,11 @@
-import type { BlogPost, BlogPostCard, FaqCategory, Product } from "@/lib/content-api";
+import type {
+    BlogPost,
+    BlogPostCard,
+    FaqCategory,
+    PlanComparisonSection,
+    PlanComparisonValue,
+    Product,
+} from "@/lib/content-api";
 import type { FacilityCard, FacilityProfile, Place, Service } from "@/lib/directory-api";
 import { blogPostUrl, facilityUrl, faqUrl, placeUrl, pricingUrl } from "@/lib/links";
 
@@ -190,4 +197,39 @@ function featureText(feature: { symbol: string; number?: number; text: string })
         default:
             return feature.text;
     }
+}
+
+function comparisonValue(value: PlanComparisonValue | undefined): string {
+    switch (value?.symbol) {
+        case undefined:
+        case "X":
+            return "✗ Not included";
+        case "CHECK":
+            return "✓ Included";
+        case "INFINITY":
+            return "Unlimited";
+        case "NUMBER":
+            return String(value.number ?? 0);
+        default:
+            return "—";
+    }
+}
+
+/**
+ * The plan-by-plan matrix, keyed by plan name rather than uuid so a model can read a row aloud.
+ * A plan missing from a row's values does not include that feature.
+ */
+export function shapeComparison(comparison: PlanComparisonSection[], products: Product[]) {
+    const plans = products.map((product) => ({ uuid: product.uuid, name: product.name ?? "Plan" }));
+
+    return comparison.map((section) => ({
+        title: section.title,
+        features: section.features.map((feature) =>
+            compact({
+                feature: feature.label,
+                note: feature.tooltip,
+                plans: Object.fromEntries(plans.map((plan) => [plan.name, comparisonValue(feature.values[plan.uuid])])),
+            }),
+        ),
+    }));
 }

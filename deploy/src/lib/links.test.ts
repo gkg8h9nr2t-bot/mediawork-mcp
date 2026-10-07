@@ -28,9 +28,8 @@ describe("links", () => {
         expect(placeUrl("COUNTRY", "thailand", "de")).toBe("https://www.mediawork.io/de/directory/country/thailand");
     });
 
-    // Pricing lives on the www home page, so the English URL has no path at all beyond the slash.
-    it("points pricing at the home page", () => {
-        expect(pricingUrl()).toBe("https://www.mediawork.io/");
-        expect(pricingUrl("pt")).toBe("https://www.mediawork.io/pt/");
+    it("points pricing at the pricing page", () => {
+        expect(pricingUrl()).toBe("https://www.mediawork.io/pricing");
+        expect(pricingUrl("pt")).toBe("https://www.mediawork.io/pt/pricing");
     });
 });

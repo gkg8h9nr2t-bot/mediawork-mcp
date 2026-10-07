@@ -47,7 +47,6 @@ export function faqUrl(locale?: string): string {
     return url(locale, "/faq");
 }
 
-// Pricing lives on the www home page rather than a page of its own.
 export function pricingUrl(locale?: string): string {
-    return url(locale, "/");
+    return url(locale, "/pricing");
 }
