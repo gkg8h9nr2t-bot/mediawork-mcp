@@ -228,6 +228,27 @@ describe("shapeProducts", () => {
 });
 
 describe("shapeComparison", () => {
+    it("keeps two plans that share a name apart", () => {
+        const twins = [products[0], { ...products[0], uuid: "twin-uuid" }];
+        const shaped = shapeComparison(
+            [
+                {
+                    title: "Quoting",
+                    features: [
+                        {
+                            label: "Quote templates",
+                            tooltip: null,
+                            values: { "product-uuid": { symbol: "CHECK", number: null } },
+                        },
+                    ],
+                },
+            ],
+            twins,
+        );
+
+        expect(shaped[0].features[0].plans).toEqual({ Pro: "✓ Included", "Pro (2)": "✗ Not included" });
+    });
+
     it("keys each row by plan name and reads an absent plan as not included", () => {
         expect(
             shapeComparison(

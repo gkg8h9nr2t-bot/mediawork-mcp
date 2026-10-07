@@ -220,7 +220,14 @@ function comparisonValue(value: PlanComparisonValue | undefined): string {
  * A plan missing from a row's values does not include that feature.
  */
 export function shapeComparison(comparison: PlanComparisonSection[], products: Product[]) {
-    const plans = products.map((product) => ({ uuid: product.uuid, name: product.name ?? "Plan" }));
+    const seen = new Map<string, number>();
+    const plans = products.map((product) => {
+        const base = product.name ?? "Plan";
+        const count = (seen.get(base) ?? 0) + 1;
+        seen.set(base, count);
+
+        return { uuid: product.uuid, name: count === 1 ? base : `${base} (${count})` };
+    });
 
     return comparison.map((section) => ({
         title: section.title,
