@@ -140,10 +140,12 @@ test("lists the service taxonomy the directory filters on", async () => {
 test("returns plans, the FAQ and blog posts", async () => {
     const client = await connect();
 
-    const { plans } = await callJson(client, "get_plans", { currency: "USD" });
+    const { plans, comparison } = await callJson(client, "get_plans", { currency: "USD" });
 
     expect(plans.length).toBeGreaterThan(0);
-    expect(plans[0].url).toBe("https://www.mediawork.io/");
+    expect(plans[0].url).toBe("https://www.mediawork.io/pricing");
+    // Empty until the app release carrying the comparison is live; the shape is what holds either way.
+    expect(Array.isArray(comparison)).toBe(true);
 
     for (const price of plans.flatMap((plan: { prices?: { currency: string }[] }) => plan.prices ?? [])) {
         expect(price.currency).toBe("USD");
