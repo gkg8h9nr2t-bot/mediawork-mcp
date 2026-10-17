@@ -4,7 +4,6 @@ Read-only [Model Context Protocol](https://modelcontextprotocol.io) access to ev
 [Mediawork](https://www.mediawork.io) publishes publicly: the directory of post-production and
 distribution vendors, the FAQ, the blog, and subscription plans.
 
-**Connector URL: `https://mcp.mediawork.io/mcp`** — Streamable HTTP, no authentication, no sign-up.
 
 Listed in the official MCP Registry as `io.mediawork/mediawork`.
 
