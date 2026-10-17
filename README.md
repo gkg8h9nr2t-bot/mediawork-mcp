@@ -1,65 +1,134 @@
-# Mediawork MCP server
+/**
+ * \file reset.c
+ *
+ *  Time-stamp:      "2010-07-10 10:56:34 bkorb"
+ *
+ *  This file is part of AutoOpts, a companion to AutoGen.
+ *  AutoOpts is free software.
+ *  AutoOpts is Copyright (c) 1992-2010 by Bruce Korb - all rights reserved
+ *
+ *  AutoOpts is available under any one of two licenses.  The license
+ *  in use must be one of these two and the choice is under the control
+ *  of the user of the license.
+ *
+ *   The GNU Lesser General Public License, version 3 or later
+ *      See the files "COPYING.lgplv3" and "COPYING.gplv3"
+ *
+ *   The Modified Berkeley Software Distribution License
+ *      See the file "COPYING.mbsd"
+ *
+ *  These files have the following md5sums:
+ *
+ *  43b91e8ca915626ed3818ffb1b71248b pkg/libopts/COPYING.gplv3
+ *  06a1a2e4760c90ea5e1dad8dfaac4d39 pkg/libopts/COPYING.lgplv3
+ *  66a5cedaf62c4b2637025f049f9b826f pkg/libopts/COPYING.mbsd
+ */
 
-Read-only [Model Context Protocol](https://modelcontextprotocol.io) access to everything
-[Mediawork](https://www.mediawork.io) publishes publicly: the directory of post-production and
-distribution vendors, the FAQ, the blog, and subscription plans.
-
-
-Listed in the official MCP Registry as `io.mediawork/mediawork`.
-
-## Connect it
-
-Claude Code:
-
-```sh
-claude mcp add --transport http mediawork https://mcp.mediawork.io/mcp
-```
-
-Anything that takes a JSON config:
-
-```json
+static void
+optionReset( tOptions* pOpts, tOptDesc* pOD )
 {
-    "mcpServers": {
-        "mediawork": {
-            "type": "http",
-            "url": "https://mcp.mediawork.io/mcp"
-        }
+    pOD->fOptState &= OPTST_PERSISTENT_MASK;
+    pOD->fOptState |= OPTST_RESET;
+    if (pOD->pOptProc != NULL)
+        pOD->pOptProc(pOpts, pOD);
+    pOD->optArg.argString =
+        pOpts->originalOptArgArray[ pOD->optIndex ].argString;
+    pOD->optCookie = pOpts->originalOptArgCookie[ pOD->optIndex ];
+    pOD->fOptState &= OPTST_PERSISTENT_MASK;
+}
+
+
+static void
+optionResetEverything(tOptions * pOpts)
+{
+    tOptDesc * pOD = pOpts->pOptDesc;
+    int        ct  = pOpts->presetOptCt;
+
+    for (;;) {
+        optionReset(pOpts, pOD);
+
+        if (--ct <= 0)
+            break;
+        pOD++;
     }
 }
-```
 
-## Tools
 
-| Tool | What it does |
-| --- | --- |
-| `search` | One query across the directory, FAQ and blog, returning `{id, title, url}` |
-| `fetch` | Read one record in full, by an `id` from `search` |
-| `search_facilities` | The vendor directory, filtered by service and place |
-| `get_facility` | A vendor's full public profile |
-| `list_services` | The service taxonomy, for resolving a filter |
-| `list_places` | Cities, states and countries with vendors in them |
-| `search_faq` | Published FAQ entries |
-| `list_blog_posts` / `get_blog_post` | The blog |
-| `get_plans` | Subscription plans and pricing |
+/*=export_func  optionResetOpt
+ * private:
+ *
+ * what:  Reset the value of an option
+ * arg:   + tOptions* + pOpts    + program options descriptor  +
+ * arg:   + tOptDesc* + pOptDesc + the descriptor for this arg +
+ *
+ * doc:
+ *  This code will cause another option to be reset to its initial state.
+ *  For example, --reset=foo will cause the --foo option to be reset.
+=*/
+void
+optionResetOpt( tOptions* pOpts, tOptDesc* pOD )
+{
+    static ag_bool reset_active = AG_FALSE;
 
-`search` + `fetch` are the generic pair some clients require; the dedicated tools give richer,
-filterable results where a client can use them.
+    tOptState opt_state = OPTSTATE_INITIALIZER(DEFINED);
+    char const * pzArg = pOD->optArg.argString;
+    tSuccess     succ;
 
-Directory questions usually chain: `list_services` or `list_places` to resolve a filter, then
-`search_facilities`, then `get_facility`. Every result carries its canonical `www.mediawork.io` URL
-so an agent can cite the source.
+    if (reset_active)
+        return;
 
-## Read-only, structurally
+    if (  (! HAS_originalOptArgArray(pOpts))
+       || (pOpts->originalOptArgCookie == NULL)) {
+        fputs(zResetNotConfig, stderr);
+        _exit(EX_SOFTWARE);
+    }
 
-The deployment holds exactly one environment variable, `APP_API_URL`, and every byte it serves comes
-from `https://app.mediawork.io/api/www/*` — the same public contract the marketing site consumes.
-There are no database credentials and no write path, so "read-only" is a property of the
-deployment's shape rather than a promise in a comment.
+    if ((pzArg == NULL) || (*pzArg == NUL)) {
+        fputs(zNoResetArg, stderr);
+        pOpts->pUsageProc(pOpts, EXIT_FAILURE);
+        /* NOTREACHED */
+        assert(0 == 1);
+    }
 
-## Contributing
+    reset_active = AG_TRUE;
 
-Setup, the test commands and the house conventions are in [CONTRIBUTING.md](CONTRIBUTING.md).
+    if (pzArg[1] == NUL) {
+        if (*pzArg == '*') {
+            optionResetEverything(pOpts);
+            reset_active = AG_FALSE;
+            return;
+        }
 
-## Licence
+        succ = shortOptionFind(pOpts, (tAoUC)*pzArg, &opt_state);
+        if (! SUCCESSFUL(succ)) {
+            fprintf(stderr, zIllOptChr, pOpts->pzProgPath, *pzArg);
+            pOpts->pUsageProc(pOpts, EXIT_FAILURE);
+            /* NOTREACHED */
+            assert(0 == 1);
+        }
+    } else {
+        succ = longOptionFind(pOpts, (char *)pzArg, &opt_state);
+        if (! SUCCESSFUL(succ)) {
+            fprintf(stderr, zIllOptStr, pOpts->pzProgPath, pzArg);
+            pOpts->pUsageProc(pOpts, EXIT_FAILURE);
+            /* NOTREACHED */
+            assert(0 == 1);
+        }
+    }
 
-[MIT](LICENSE) © Screen Arts Limited.
+    /*
+     *  We've found the indicated option.  Turn off all non-persistent
+     *  flags because we're forcing the option back to its initialized state.
+     *  Call any callout procedure to handle whatever it needs to.
+     *  Finally, clear the reset flag, too.
+     */
+    optionReset(pOpts, opt_state.pOD);
+    reset_active = AG_FALSE;
+}
+/*
+ * Local Variables:
+ * mode: C
+ * c-file-style: "stroustrup"
+ * indent-tabs-mode: nil
+ * End:
+ * end of autoopts/reset.c */
